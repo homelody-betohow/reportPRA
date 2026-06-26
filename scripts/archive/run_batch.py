@@ -12,10 +12,9 @@ from __future__ import annotations
   3. profit_002_order_price.py    覆盖 Temu 价格（RPA 明细）
   4. profit_003_order_first.py    重算头程/关税
   5. profit_004_order_delivery_amz.py 更新派送运费（Amazon FBA）
-  6. profit_004_order_delivery_mano.py 更新派送运费（Mano MMF）
 
 用法：
-  cd d:\\py-project\\report
+  cd d:\\path\\to\\rpa-task
   python scripts\\archive\\run_batch.py
   python scripts\\archive\\run_batch.py --batch 20260616_203140
   python scripts\\archive\\run_batch.py --dry-run
@@ -56,6 +55,7 @@ _STEPS: tuple[tuple[str, str], ...] = (
     ("profit_002_order_market.py", "市场信息回填"),
     ("profit_002_order_price.py", "Temu 价格覆盖"),
     ("profit_003_order_first.py", "头程/关税重算"),
+    ("profit_004_order_delivery_amz.py", "Amazon FBA 派送费"),
 )
 
 _DRY_RUN_SCRIPTS = frozenset(
@@ -63,6 +63,7 @@ _DRY_RUN_SCRIPTS = frozenset(
         "profit_002_order_market.py",
         "profit_002_order_price.py",
         "profit_003_order_first.py",
+        "profit_004_order_delivery_amz.py",
     }
 )
 
@@ -71,6 +72,7 @@ _STEP_STYLES: dict[str, tuple[str, str]] = {
     "profit_002_order_market.py": (BG_YELLOW, FG_BLACK),
     "profit_002_order_price.py": (BG_MAGENTA, FG_WHITE),
     "profit_003_order_first.py": (BG_CYAN, FG_BLACK),
+    "profit_004_order_delivery_amz.py": (BG_YELLOW, FG_BLACK),
 }
 
 
@@ -164,7 +166,7 @@ def parse_args() -> argparse.Namespace:
     ap.add_argument(
         "--dry-run",
         action="store_true",
-        help="传给支持 dry-run 的子脚本（002_market、002_price、003）；001 仍会写库",
+        help="传给支持 dry-run 的子脚本（002_market、002_price、003、004_amz）；001 仍会写库",
     )
     ap.add_argument(
         "--step",
@@ -222,7 +224,7 @@ def main() -> int:
     if args.dry_run:
         _log(
             "WARN",
-            "dry-run 模式：001 仍会 UPSERT 利润表；002/003 仅统计不写库",
+            "dry-run 模式：001 仍会 UPSERT 利润表；002/003/004 仅统计不写库",
             use_color=use_color,
         )
 

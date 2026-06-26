@@ -1,0 +1,12 @@
+-- 已弃用：order_sku_profit_step02 改为复用 sales_order_sku_profit 原有列，勿执行本文件的 ADD COLUMN。
+--
+-- 字段对照（见 python/v2/profit/order_sku_profit_step02.py 模块注释）：
+--   txn_mapped_fba_fee_pay → fba_fee_pay / fba_fee_base（仅原派送与 FBA 均为 0 时从 amz_transaction 回填）
+--   platform_sales_vat_* / 税率 → tax_pay / tax_base（Amazon + VAT 映射表）
+--   delivery_fee_map_bucket → shipping_method（仓库大类-站点大类）
+--
+-- 若曾执行过旧版「新增四列」的脚本，可按需手工 DROP 下列列（列名以你库中实际为准）：
+-- ALTER TABLE `sales_order_sku_profit` DROP COLUMN `txn_mapped_fba_fee_pay`;
+-- ALTER TABLE `sales_order_sku_profit` DROP COLUMN `vat_rate_amazon`;
+-- ALTER TABLE `sales_order_sku_profit` DROP COLUMN `platform_sales_vat_base`;
+-- ALTER TABLE `sales_order_sku_profit` DROP COLUMN `delivery_fee_map_bucket`;

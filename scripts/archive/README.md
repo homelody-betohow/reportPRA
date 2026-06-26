@@ -12,11 +12,12 @@
 
 | 文件 | 作用 |
 |------|------|
-| `run_batch.py` | 读取 `import_batch`，按固定顺序调用四个利润脚本 |
+| `run_batch.py` | 读取 `import_batch`，按固定顺序调用五个利润脚本 |
 | `profit_001_order_sku.py` | 发货表 → 利润表初始化（UPSERT，`calc_node=init`） |
 | `profit_002_order_market.py` | 从 `platform_shop` 回填 `market_region`、`market_code` |
 | `profit_002_order_price.py` | 从 `temu_order_item` 覆盖 Temu 订单价格（RPA 明细） |
 | `profit_003_order_first.py` | 按 SKU 主数据重算头程/关税（`calc_node=first_leg`） |
+| `profit_004_order_delivery_amz.py` | 从 `amz_transaction` 汇总 Amazon FBA 派送费 |
 
 公共依赖：
 
@@ -25,7 +26,7 @@
 - `config/db_config.json` — 数据库连接
 - `config/common.py` — 汇率、`BTH_ALL_SKU_DETAIL_PATH`（头程主数据 Excel）
 
-表结构 DDL 见 `report/database/tables/sales_order_sku_profit.sql`。
+表结构 DDL 见 `docs/database/025_sales_order_sku_profit.sql` 等。
 
 ---
 
@@ -38,8 +39,14 @@ archive/run_batch.py
     ├─ 1. profit_001_order_sku.py      初始化利润表
     ├─ 2. profit_002_order_market.py   补全市场区域/编码
     ├─ 3. profit_002_order_price.py    覆盖 Temu 价格（可选但建议）
-    └─ 4. profit_003_order_first.py    重算头程/关税
+    ├─ 4. profit_003_order_first.py    重算头程/关税
+    └─ 5. profit_004_order_delivery_amz.py  Amazon FBA 派送费
 ```
+
+**待实现**（脚本占位，未接入 `run_batch`）：
+
+- `profit_004_order_delivery_mano.py` — Mano MMF 派送费
+- `profit_005_order_vat.py` — VAT
 
 - **001 必须先跑**：后续脚本均依赖 `sales_order_sku_profit` 中已存在的 `line_hash` 行。
 - **002_market 与 002_price 互不依赖**，顺序可互换；均通过 `sales_order_shipped.line_hash` 关联本批数据。
@@ -52,10 +59,10 @@ archive/run_batch.py
 
 ## 快速开始
 
-在 **`report` 目录**下执行：
+在 **项目根目录**下执行：
 
 ```powershell
-cd d:\py-project\report
+cd <项目根目录>
 
 # 前置：Excel 导入（若尚未执行）
 python scripts\dataImport\run_batch.py
@@ -67,7 +74,7 @@ python scripts\archive\run_batch.py
 `run_batch.py` 会：
 
 1. 从 `dataImport/run_batch.lock` 读取 `import_batch`（或用 `--batch` 覆盖）
-2. 将同一批次号传给四个子脚本
+2. 将同一批次号传给五个子脚本
 3. 某步失败则停止（可用 `--continue-on-error` 继续）
 
 ### 常用参数
@@ -206,6 +213,22 @@ python scripts\archive\profit_003_order_first.py --pricing-source excel
 python scripts\archive\profit_003_order_first.py --excel-file "\\Betohow\...\BTH全部SKU明细-v2026.06.02.xlsx"
 ```
 
+### profit_004_order_delivery_amz.py — Amazon FBA 派送费
+
+| 项 | 说明 |
+|----|------|
+| 数据源 | `amz_transaction`（按 `order_no` + `platform_sku` 汇总） |
+| 目标表 | `sales_order_sku_profit` |
+| 更新字段 | `delivery_shipping_base` |
+| 前置 | 须先导入 `amz_transaction`（`dataImport/amz_transaction.py`） |
+
+```powershell
+python scripts\archive\profit_004_order_delivery_amz.py
+python scripts\archive\profit_004_order_delivery_amz.py --batch 20260616_203140
+python scripts\archive\profit_004_order_delivery_amz.py --all
+python scripts\archive\profit_004_order_delivery_amz.py --dry-run
+```
+
 ---
 
 ## calc_node 流转
@@ -228,7 +251,7 @@ python scripts\archive\profit_003_order_first.py --excel-file "\\Betohow\...\BTH
 | `--continue-on-error` | `run_batch` | 某步失败后继续 |
 | `--no-color` | `run_batch` | 禁用彩色日志 |
 | `--all` | `002_market`、`002_price` | 全表更新，忽略批次 |
-| `--dry-run` | `002_market`、`002_price`、`003` | 仅统计/计算，不写库 |
+| `--dry-run` | `002_market`、`002_price`、`003`、`004_amz` | 仅统计/计算，不写库 |
 | `--step 0\|1\|2` | `003` | `0`=两步都跑（默认），`1`=仅头程运费，`2`=仅头程关税 |
 | `--pricing-source db\|excel` | `003` | 头程主数据来源 |
 | `--excel-file PATH` | `003` | Excel 模式下的 SKU 明细文件 |
@@ -259,6 +282,6 @@ python scripts\archive\profit_003_order_first.py --excel-file "\\Betohow\...\BTH
 ## 相关文档
 
 - 数据导入：`scripts/dataImport/README.md`
-- 项目总览：`report/README.md`
-- 汇率与 Excel 路径：`report/config/common.py`
-- 表结构：`report/database/tables/sales_order_sku_profit.sql`、`platform_shop.sql`、`product_sku_pricing.sql`
+- 项目总览：`README.md`、`docs/项目说明.md`
+- 汇率与 Excel 路径：`config/common.py`
+- 表结构：`docs/database/025_sales_order_sku_profit.sql`、`005_platform_shop.sql`、`003_product_sku_pricing.sql`

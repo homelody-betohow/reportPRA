@@ -307,7 +307,7 @@ def _fetch_shipped_by_field(
 
     cols_sql = ", ".join(f"`{c}`" for c in _SHIPPED_FETCH_COLS)
     wanted_list = sorted(values)
-    cur = conn.cursor()
+    cur = conn.cursor(pymysql.cursors.DictCursor)
     t0 = time.perf_counter()
     seen_ids: dict[str, set[Any]] = {}
     try:
@@ -896,7 +896,7 @@ def _warn_missing_shop_name_en(conn: Any) -> int:
     若存在空值，以醒目颜色提示需人工维护。
     """
     where_blank = "`shop_name_en` IS NULL OR TRIM(`shop_name_en`) = ''"
-    with conn.cursor() as cur:
+    with conn.cursor(pymysql.cursors.DictCursor) as cur:
         cur.execute(f"SELECT COUNT(*) AS cnt FROM `{TABLE}` WHERE {where_blank}")
         row = cur.fetchone() or {}
         missing = int(row.get("cnt") or 0)
@@ -905,7 +905,7 @@ def _warn_missing_shop_name_en(conn: Any) -> int:
         _log_success(f"检查完成：{TABLE}.shop_name_en 无空值")
         return 0
 
-    with conn.cursor() as cur:
+    with conn.cursor(pymysql.cursors.DictCursor) as cur:
         cur.execute(
             f"""
             SELECT `return_doc_no`, `warehouse_sku`, `orig_order_no`, `orig_sales_order_no`, `platform`

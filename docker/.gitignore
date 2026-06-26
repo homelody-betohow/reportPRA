@@ -1,0 +1,3 @@
+# 本地 MySQL 数据目录（若改为 bind mount 挂载到此处）
+data/
+mysql/data/

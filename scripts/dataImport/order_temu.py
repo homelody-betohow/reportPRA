@@ -191,7 +191,7 @@ def _normalize_pay_currency(pay_currency: Any) -> str:
 
 def _fx_rate_to_base(pay_currency: Any) -> Decimal | None:
     """
-    返回「1 单位付款币 = ? EUR」，与 import_temu_fee / A_报表 折算口径一致。
+    返回「1 单位付款币 = ? EUR」，与 import_temu_fee 折算口径一致。
     CNY/RMB：除以 RMB_di_EUR；其余外币：乘以 common.py 中对应系数。
     """
     c = _normalize_pay_currency(pay_currency)

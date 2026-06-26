@@ -14,7 +14,7 @@ RATE_SHIP_FEE = 1.05  # 运费费率
 SKU_NW_DISCOUNT = 0.8  # NW尾缀SKU 折扣
 
 # =========================================================
-# Excel 主数据路径（report 项目内部使用，不依赖 A_报表）
+# Excel 主数据路径
 # - 主要用于「BTH全部SKU明细」：头程（RMB）/ 关税（含税）等字段
 # - 优先：自动在共享目录中查找最新版本 BTH全部SKU明细-*.xlsx
 # - 回退：config/path_config.py 中的 EXCEL_MAPPING_PATH

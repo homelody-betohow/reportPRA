@@ -4,13 +4,15 @@ from __future__ import annotations
 按时间生成 import_batch，顺序执行 dataImport 导入流水线。
 
 当日重复执行时复用 `run_batch.lock` 中的 import_batch；跨日自动清除旧锁并生成新批次。
-执行结束后写入/更新锁文件。
+确定批次后立即写入锁文件（便于子脚本读取与同日重跑）；执行结束后再更新 updated_at。
 
 顺序：
+  0. check_list.py      -> 检查 Excel 源文件是否已就绪
   1. order_shipped.py   -> sales_order_shipped（写入 import_batch）
   2. order_refund.py    -> sales_order_refund（写入 report_hash）
   3. order_returned.py  -> sales_order_returned（写入 report_hash）
-  4. order_temu.py      -> sales_order_shipped（更新Temu订单费用）
+  4. order_temu.py      -> 更新 Temu 订单费用（按 import_batch 过滤）
+  5. amz_transaction.py -> amz_transaction（line_hash 去重，不传 import_batch）
 
 用法：
   cd d:\\py-project\\report
@@ -18,6 +20,7 @@ from __future__ import annotations
   python scripts\\dataImport\\run_batch.py --date 2026-06-09
   python scripts\\dataImport\\run_batch.py --import-batch 20260616_120000
   python scripts\\dataImport\\run_batch.py --mode 每天
+  python scripts\\dataImport\\run_batch.py --skip-check   # 跳过 Excel 源文件检查
 """
 
 import argparse
@@ -33,6 +36,16 @@ _DATA_IMPORT_DIR = Path(__file__).resolve().parent
 _REPORT_ROOT = _DATA_IMPORT_DIR.parents[1]
 _LOCK_FILE = _DATA_IMPORT_DIR / "run_batch.lock"
 
+_PRECHECK: tuple[str, str] = ("check_list.py", "Excel 源文件检查")
+
+# 需要写入 import_batch / report_hash 的步骤；amz_transaction 用 line_hash 去重，无此参数
+_IMPORT_BATCH_SCRIPTS: frozenset[str] = frozenset({
+    "order_shipped.py",
+    "order_refund.py",
+    "order_returned.py",
+    "order_temu.py",
+})
+
 _STEPS: tuple[tuple[str, str], ...] = (
     ("order_shipped.py", "订单发货"),
     ("order_refund.py", "RMA 退款"),
@@ -43,6 +56,7 @@ _STEPS: tuple[tuple[str, str], ...] = (
 
 # 各步骤横幅背景色（ANSI）：(背景, 前景)
 _STEP_STYLES: dict[str, tuple[str, str]] = {
+    "check_list.py": ("\033[40m", "\033[97m"),      # 黑底白字
     "order_shipped.py": ("\033[44m", "\033[97m"),   # 蓝底白字
     "order_refund.py": ("\033[43m", "\033[30m"),    # 黄底黑字
     "order_returned.py": ("\033[45m", "\033[97m"),  # 洋红底白字
@@ -109,7 +123,7 @@ def _log_step_banner(
         title = f" ▶ 步骤 {step_i}/{total}：{label}（{script}） "
         bg, fg = _STEP_STYLES.get(script, ("\033[46m", "\033[30m"))
     elif phase == "ok":
-        title = f" ✓ 完成 {step_i}/{total}：{label}（{script}） "
+        title = f" ✓ 完成 {step_i}/{total}：{label}（{script}）\n\n "
         bg, fg = _STYLE_OK
     else:
         title = f" ✗ 失败 {step_i}/{total}：{label}（{script}） "
@@ -177,7 +191,7 @@ def resolve_import_batch(override: str | None, *, use_color: bool) -> str:
     return batch
 
 
-def write_lock(import_batch: str, *, use_color: bool) -> None:
+def write_lock(import_batch: str, *, use_color: bool, refreshed: bool = False) -> None:
     payload = {
         "run_date": date.today().isoformat(),
         "import_batch": import_batch,
@@ -188,9 +202,29 @@ def write_lock(import_batch: str, *, use_color: bool) -> None:
             json.dumps(payload, ensure_ascii=False, indent=2) + "\n",
             encoding="utf-8",
         )
-        _log("INFO", f"已写入锁文件：{_LOCK_FILE}", use_color=use_color)
+        action = "已更新锁文件（执行结束）" if refreshed else "已写入锁文件"
+        _log("INFO", f"{action}：{_LOCK_FILE}", use_color=use_color)
     except OSError as e:
         _log("WARN", f"写入锁文件失败：{_LOCK_FILE} ({e})", use_color=use_color)
+
+
+def build_check_argv(
+    *,
+    date_arg: date | None,
+    mode: str | None,
+    no_color: bool,
+) -> list[str]:
+    argv = [
+        sys.executable,
+        str(_DATA_IMPORT_DIR / _PRECHECK[0]),
+    ]
+    if date_arg is not None:
+        argv.extend(["--date", date_arg.isoformat()])
+    if mode is not None:
+        argv.extend(["--mode", mode])
+    if no_color:
+        argv.append("--no-color")
+    return argv
 
 
 def build_child_argv(
@@ -204,9 +238,9 @@ def build_child_argv(
     argv = [
         sys.executable,
         str(_DATA_IMPORT_DIR / script),
-        "--import-batch",
-        import_batch,
     ]
+    if script in _IMPORT_BATCH_SCRIPTS:
+        argv.extend(["--import-batch", import_batch])
     if date_arg is not None:
         argv.extend(["--date", date_arg.isoformat()])
     if mode is not None:
@@ -245,9 +279,14 @@ def parse_args() -> argparse.Namespace:
         help="传给 order_returned.py：不从 sales_order_shipped 回填平台/店铺等",
     )
     ap.add_argument(
+        "--skip-check",
+        action="store_true",
+        help="跳过 check_list.py 源文件检查（默认先检查，未通过则不执行导入）",
+    )
+    ap.add_argument(
         "--continue-on-error",
         action="store_true",
-        help="某步失败后继续执行后续脚本（默认遇错即停）",
+        help="某步失败后继续执行后续脚本（默认遇错即停；不影响前置检查）",
     )
     ap.add_argument(
         "--no-color",
@@ -270,11 +309,57 @@ def main() -> int:
     use_color = _supports_color(no_color=args.no_color)
     import_batch = resolve_import_batch(args.import_batch, use_color=use_color)
     _log("INFO", f"本批 import_batch={import_batch}", use_color=use_color)
+    write_lock(import_batch, use_color=use_color)
 
+    total_steps = len(_STEPS) + (0 if args.skip_check else 1)
     exit_code = 0
     failed = 0
     try:
+        if not args.skip_check:
+            check_script, check_label = _PRECHECK
+            check_argv = build_check_argv(
+                date_arg=args.date,
+                mode=args.mode,
+                no_color=args.no_color,
+            )
+            _log_step_banner(
+                check_script,
+                check_label,
+                1,
+                total_steps,
+                phase="start",
+                use_color=use_color,
+            )
+            _log("INFO", f"执行：{' '.join(check_argv)}", use_color=use_color)
+            check_rc = subprocess.run(check_argv, cwd=_REPORT_ROOT).returncode
+            if check_rc != 0:
+                _log_step_banner(
+                    check_script,
+                    check_label,
+                    1,
+                    total_steps,
+                    phase="fail",
+                    detail=f"退出码={check_rc}",
+                    use_color=use_color,
+                )
+                _log(
+                    "ERROR",
+                    f"{check_script} 未通过，已中止后续导入（可用 --skip-check 跳过）",
+                    use_color=use_color,
+                )
+                return check_rc
+            _log_step_banner(
+                check_script,
+                check_label,
+                1,
+                total_steps,
+                phase="ok",
+                use_color=use_color,
+            )
+
+        step_offset = 0 if args.skip_check else 1
         for step_i, (script, label) in enumerate(_STEPS, 1):
+            display_step = step_i + step_offset
             argv = build_child_argv(
                 script,
                 import_batch,
@@ -283,7 +368,12 @@ def main() -> int:
                 no_shipped_enrich=args.no_shipped_enrich,
             )
             _log_step_banner(
-                script, label, step_i, len(_STEPS), phase="start", use_color=use_color
+                script,
+                label,
+                display_step,
+                total_steps,
+                phase="start",
+                use_color=use_color,
             )
             _log("INFO", f"执行：{' '.join(argv)}", use_color=use_color)
             rc = subprocess.run(argv, cwd=_REPORT_ROOT).returncode
@@ -291,8 +381,8 @@ def main() -> int:
                 _log_step_banner(
                     script,
                     label,
-                    step_i,
-                    len(_STEPS),
+                    display_step,
+                    total_steps,
                     phase="fail",
                     detail=f"退出码={rc}",
                     use_color=use_color,
@@ -304,7 +394,12 @@ def main() -> int:
                     return exit_code
             else:
                 _log_step_banner(
-                    script, label, step_i, len(_STEPS), phase="ok", use_color=use_color
+                    script,
+                    label,
+                    display_step,
+                    total_steps,
+                    phase="ok",
+                    use_color=use_color,
                 )
 
         if failed:
@@ -318,7 +413,7 @@ def main() -> int:
             _log("INFO", f"全部完成，import_batch={import_batch}", use_color=use_color)
         return exit_code
     finally:
-        write_lock(import_batch, use_color=use_color)
+        write_lock(import_batch, use_color=use_color, refreshed=True)
 
 
 if __name__ == "__main__":

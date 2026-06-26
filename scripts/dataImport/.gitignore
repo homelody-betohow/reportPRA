@@ -1,0 +1,6 @@
+# 批处理导入批次锁（每次运行自动生成）
+run_batch.lock
+
+# Python 缓存
+__pycache__/
+*.py[cod]

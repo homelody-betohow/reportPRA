@@ -1,0 +1,55 @@
+# ========== 环境与密钥（勿上传） ==========
+.env
+.env.local
+.env.*.local
+
+# ========== Python ==========
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+env/
+*.egg-info/
+.eggs/
+dist/
+build/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# ========== 本地配置（含数据库密码、本机路径） ==========
+config/config.json
+config/db_config.json
+
+# ========== 运行时状态 ==========
+*.lock
+
+# ========== 日志 ==========
+*.log
+logs/
+
+# ========== 业务数据文件（Excel/CSV，通常在网络盘或本机，不入库） ==========
+excel/
+*.xlsx
+*.xls
+*.xlsm
+*.csv
+~$*
+
+# ========== IDE / 编辑器 ==========
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# ========== 操作系统 ==========
+.DS_Store
+Thumbs.db
+desktop.ini
+ehthumbs.db

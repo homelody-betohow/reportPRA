@@ -1,0 +1,71 @@
+-- ========================================
+-- 表：month_orders_returned
+-- 数据库：rpa-report
+-- 导出时间：2026-06-12 14:17:41
+-- 来源：局域网数据库 172.18.188.18:3309
+-- ========================================
+SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;
+USE rpa-report;
+
+DROP TABLE IF EXISTS month_orders_returned;
+CREATE TABLE `month_orders_returned` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT COMMENT '自增主键',
+  `line_hash` char(64) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '行内容稳定哈希（含 warehouse_sku 等，与 Excel 行对齐）',
+  `stat_month` char(7) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '统计月 YYYY-MM',
+  `report_date` date NOT NULL COMMENT '报表日期（一般为当月最后一天）',
+  `import_batch` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '导入文件内容 hash，便于按批次核对',
+  `source_type` varchar(24) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '来源类型：Excel/API',
+  `platform` varchar(64) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '平台',
+  `shop_name_en` varchar(128) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '店铺英文名',
+  `shop_alias` varchar(128) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '店铺别名',
+  `platform_site` varchar(64) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '站点',
+  `warehouse_name` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '仓库名称',
+  `warehouse_code` varchar(64) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '仓库代码',
+  `return_doc_no` varchar(128) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '退件单号',
+  `receiving_no` varchar(128) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '入库单/收货单号',
+  `rma_no` varchar(128) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'RMA编号',
+  `orig_order_no` varchar(128) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '原销售订单号',
+  `orig_ref_no` varchar(128) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT '原订单参考号',
+  `orig_sales_order_no` varchar(128) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '原销售订单号（业务侧）',
+  `orig_tracking_no` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '原 outbound 跟踪号',
+  `return_type` varchar(64) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '退件类型',
+  `return_status` varchar(64) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '退件状态',
+  `disposition` varchar(64) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '处置',
+  `platform_sku` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '平台 SKU',
+  `warehouse_sku` varchar(128) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '仓库 SKU',
+  `product_sku` varchar(128) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '产品 SKU',
+  `product_name` varchar(512) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '产品名称',
+  `return_qty` decimal(18,6) NOT NULL COMMENT '退件数量',
+  `received_qty` decimal(18,6) DEFAULT NULL COMMENT '实收数量',
+  `putaway_qty` decimal(18,6) DEFAULT NULL COMMENT '已上架数量',
+  `return_tracking_no` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '退件物流跟踪号',
+  `carrier` varchar(128) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '承运商',
+  `shipping_method` varchar(128) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '运输方式',
+  `apply_at` datetime DEFAULT NULL COMMENT '退件申请时间',
+  `buyer_ship_at` datetime DEFAULT NULL COMMENT '买家寄出时间',
+  `received_at` datetime DEFAULT NULL COMMENT '仓库签收时间',
+  `putaway_at` datetime DEFAULT NULL COMMENT '上架完成时间',
+  `inspected_at` datetime DEFAULT NULL COMMENT '质检完成时间',
+  `length_cm` decimal(18,6) DEFAULT NULL COMMENT '长 cm',
+  `width_cm` decimal(18,6) DEFAULT NULL COMMENT '宽 cm',
+  `height_cm` decimal(18,6) DEFAULT NULL COMMENT '高 cm',
+  `volume_m3` decimal(18,6) DEFAULT NULL COMMENT '体积 m³',
+  `weight_kg` decimal(18,6) DEFAULT NULL COMMENT '重量 kg',
+  `currency_code` varchar(16) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '币种',
+  `handling_fee` decimal(18,6) DEFAULT NULL COMMENT '退件处理费',
+  `declared_value` decimal(18,6) DEFAULT NULL COMMENT '申报货值',
+  `sales_owner` varchar(128) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '销售负责人',
+  `platform_sku_owner` varchar(128) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '平台 SKU 负责人',
+  `cs_remark` varchar(2048) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '客服备注',
+  `warehouse_remark` varchar(2048) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '仓库备注',
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '写入时间',
+  `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_month_return_line` (`stat_month`,`line_hash`),
+  KEY `idx_mret_stat_month` (`stat_month`),
+  KEY `idx_mret_import_batch` (`import_batch`),
+  KEY `idx_mret_report_date` (`report_date`),
+  KEY `idx_mret_orig_order` (`orig_order_no`),
+  KEY `idx_mret_warehouse_sku` (`warehouse_sku`),
+  KEY `idx_mret_return_doc` (`return_doc_no`)
+) ENGINE=InnoDB AUTO_INCREMENT=4212 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='月报退件(二次上架明细)';

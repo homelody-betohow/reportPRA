@@ -1,0 +1,37 @@
+# 报表系统重构 - Python 依赖包
+# 安装方式：pip install -r requirements.txt
+
+# 数据处理核心
+pandas>=1.5.0          # 数据处理和分析
+numpy>=1.23.0          # 数值计算
+
+# Excel 文件处理
+openpyxl>=3.0.0        # Excel 读写（.xlsx）
+xlrd>=2.0.0            # Excel 读取（.xls，仅读）
+
+# 数据库相关
+pymysql>=1.0.0         # MySQL 数据库驱动
+DBUtils>=3.0.0         # 数据库连接池
+cryptography>=3.4.0    # 加密支持（pymysql 需要）
+
+# 日期时间处理
+python-dateutil>=2.8.0 # 日期解析和计算
+
+# 可选：SQLite 支持（如果不用 MySQL）
+# 注：SQLite 是 Python 标准库，无需额外安装
+
+# 可选：配置管理
+# inquirer>=2.10.0     # 交互式命令行（配置向导）
+# colorama>=0.4.0      # Windows 彩色输出支持
+
+# 可选：Web 界面（未来）
+# flask>=2.0.0
+# flask-cors>=3.0.0
+
+# 可选：日志增强
+# loguru>=0.6.0        # 更强大的日志库
+
+# 开发工具（可选）
+# pytest>=7.0.0        # 单元测试
+# black>=22.0.0        # 代码格式化
+# flake8>=4.0.0        # 代码检查

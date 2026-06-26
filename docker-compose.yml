@@ -1,0 +1,93 @@
+services:
+  # ─── MySQL ─────────────────────────────────────────────────
+  mysql:
+    # 配置单一来源：仅维护宿主机 ./docker/mysql/conf.d/（挂载到 /etc/mysql/conf.d），无需自建镜像
+    image: ${MYSQL_IMAGE:-mysql:8.0}
+    container_name: ${MYSQL_CONTAINER_NAME:-rpa-mysql}
+    restart: ${MYSQL_RESTART_POLICY:-unless-stopped}
+    ports:
+      # 绑定到 0.0.0.0，确保局域网其它机器可访问宿主机的 MySQL 端口
+      - "0.0.0.0:${MYSQL_PORT:-3306}:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root_secret}
+      MYSQL_DATABASE: ${DB_NAME:-rpa-bth}
+      MYSQL_USER: ${DB_USER:-rpa-bth}
+      MYSQL_PASSWORD: ${DB_PASS:-rpa-bth_secret}
+    volumes:
+      # 须为空目录才能完成首次 mysqld --initialize；勿在 data 下放 .gitkeep 等文件
+      - ./docker/mysql/data:/var/lib/mysql
+      # 允许远程连接（bind-address=0.0.0.0）等自定义配置
+      - ./docker/mysql/conf.d:/etc/mysql/conf.d:ro
+      # 初始化脚本：为用户补齐 host='%' 的授权（首次初始化数据目录时执行）
+      - ./docker/mysql/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "mysqladmin",
+          "ping",
+          "-h",
+          "localhost",
+          "-u",
+          "${DB_USER:-rpa-bth}",
+          "-p${DB_PASS:-rpa-bth_secret}",
+        ]
+      interval: ${MYSQL_HEALTHCHECK_INTERVAL:-10s}
+      timeout: ${MYSQL_HEALTHCHECK_TIMEOUT:-5s}
+      retries: ${MYSQL_HEALTHCHECK_RETRIES:-5}
+      start_period: ${MYSQL_HEALTHCHECK_START_PERIOD:-30s}
+    networks:
+      - rpa-betohow
+
+  # ─── Redis（可选缓存）──────────────────────────────────────
+  redis:
+    build:
+      context: ./docker/redis
+      dockerfile: Dockerfile
+    container_name: ${REDIS_CONTAINER_NAME:-rpa-redis}
+    restart: ${REDIS_RESTART_POLICY:-unless-stopped}
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - ./docker/redis/data:/data
+    networks:
+      - rpa-betohow
+
+  # ─── Python 运行环境（用于跑脚本/任务）──────────────────────
+  python:
+    build:
+      # build context 需要包含项目根目录，才能在 Dockerfile 里 COPY requirements.txt
+      context: .
+      dockerfile: docker/python/Dockerfile
+    container_name: ${PYTHON_CONTAINER_NAME:-rpa-python}
+    restart: ${PYTHON_RESTART_POLICY:-unless-stopped}
+    working_dir: /app
+    volumes:
+      - ./:/app
+      # pip 缓存（可选）：加速反复安装依赖
+      - python_pip_cache:/root/.cache/pip
+    environment:
+      PYTHONDONTWRITEBYTECODE: "1"
+      PYTHONUNBUFFERED: "1"
+      PIP_DISABLE_PIP_VERSION_CHECK: "1"
+      TZ: ${TZ:-Asia/Shanghai}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      SMTP_STARTTLS: ${SMTP_STARTTLS:-true}
+      SMTP_SSL: ${SMTP_SSL:-false}
+      MAIL_FROM: ${MAIL_FROM:-}
+      MAIL_TO: ${MAIL_TO:-}
+      MAIL_SUBJECT: ${MAIL_SUBJECT:-rpa-task 定时任务通知}
+    networks:
+      - rpa-betohow
+
+networks:
+  # 固定网络名，避免不同目录/项目名下出现多套网络，导致 mysql 与 backend 不在同一网络、无法解析主机名 mysql
+  rpa-betohow:
+    name: rpa-betohow-net
+    driver: bridge
+
+volumes:
+  python_pip_cache:

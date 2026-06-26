@@ -61,7 +61,7 @@ _RELEASED_NAME_MARK = "transaction交易明细-已发放订单"
 _DEFERRED_NAME_MARK = "transaction交易明细-已推迟订单"
 
 # seller_sku/platform_sku 清洗等级：
-# - strict：严格（默认），与 A_报表/B4_1 extract_values 一致（兼容 # / BCFBAFL / amzn.gr.）
+# - strict：严格（默认），与订单统计对齐口径一致（兼容 # / BCFBAFL / amzn.gr.）
 # - loose ：宽松，仅清洗 amzn.gr*（其余原样保留）
 SKU_CLEAN_LEVEL_STRICT = "strict"
 SKU_CLEAN_LEVEL_LOOSE = "loose"
@@ -117,14 +117,14 @@ def _cell_display(cell: Any) -> str:
 
 
 def _strip_frame_strings(df: pd.DataFrame) -> None:
-    """与 A_报表/B4_1 一致：去掉单元格字符串首尾空格。"""
+    """去掉单元格字符串首尾空格。"""
     for col in df.columns:
         df[col] = df[col].apply(lambda x: x.strip() if isinstance(x, str) else x)
 
 
-def _normalize_platform_sku_like_b4_1(s: Any) -> str | None:
+def _normalize_platform_sku(s: Any) -> str | None:
     """
-    标准化 seller sku（与 A_报表/B4_1 extract_values 保持一致），用于后续与订单统计表对齐。
+    标准化 seller sku，用于后续与订单统计表对齐。
     注意：不影响 line_hash（line_hash 仍使用原 seller_sku 字段）。
     """
     if s is None or (isinstance(s, float) and pd.isna(s)):
@@ -149,7 +149,7 @@ def _normalize_platform_sku_like_b4_1(s: Any) -> str | None:
             tail = t[idx + len("amzn.gr.") :]
         return tail.split("-")[0].split("_")[0]
 
-    # 严格：与 B4_1 一致
+    # 严格模式
     if "amzn.gr." in t_lower:
         idx = t_lower.rfind("amzn.gr.")
         tail = t[idx + len("amzn.gr.") :]
@@ -288,7 +288,7 @@ def _row_dict(series: pd.Series) -> dict[str, Any]:
         if zh not in series.index:
             continue
         out[col] = _convert(series[zh], kind)
-    out["platform_sku"] = _normalize_platform_sku_like_b4_1(out.get("seller_sku"))
+    out["platform_sku"] = _normalize_platform_sku(out.get("seller_sku"))
     return out
 
 
@@ -503,7 +503,7 @@ def parse_args() -> argparse.Namespace:
         default=SKU_CLEAN_LEVEL_DEFAULT,
         help=(
             "platform_sku 清洗等级："
-            "strict=严格（默认，参照 A_报表/B4_1）；"
+            "strict=严格（默认，与订单统计对齐）；"
             "loose=宽松（仅清洗 amzn.gr*）"
         ),
     )

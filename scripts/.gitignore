@@ -1,0 +1,10 @@
+# 批处理运行时锁文件
+dataImport/run_batch.lock
+
+# 日志
+*.log
+logs/
+
+# Python 缓存
+__pycache__/
+*.py[cod]

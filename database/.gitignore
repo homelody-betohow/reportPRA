@@ -1,0 +1,8 @@
+# Python 缓存
+__pycache__/
+*.py[cod]
+
+# 本地数据库导出/备份（若有）
+*.sql.gz
+*.dump
+backups/

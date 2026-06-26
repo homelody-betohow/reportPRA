@@ -1,10 +1,9 @@
-.env
+# 本地数据库连接（含密码，每人不同）
+db_config.json
+
+# 交互式配置向导生成的本机路径配置
+config.json
+
+# Python 缓存
 __pycache__/
-*.pyc
-.pytest_cache/
-config/config.json
-*.log
-docs
-database
-docker
-docker-compose.yml
+*.py[cod]

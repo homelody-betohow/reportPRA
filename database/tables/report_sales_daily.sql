@@ -1,0 +1,72 @@
+-- ========================================
+-- 表：report_sales_daily
+-- 数据库：rpa-report
+-- 导出时间：2026-06-12 14:17:41
+-- 来源：局域网数据库 172.18.188.18:3309
+-- ========================================
+SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;
+USE rpa-report;
+
+DROP TABLE IF EXISTS report_sales_daily;
+CREATE TABLE `report_sales_daily` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT COMMENT '自增主键',
+  `period_month` char(7) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '报表月份，格式 YYYY-MM，例如 2026-04',
+  `period_text` varchar(64) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '日期段原文本，例如 5月1日-5月5日',
+  `period_start` date NOT NULL COMMENT '日期段起始日（解析自 period_text）',
+  `period_end` date NOT NULL COMMENT '日期段结束日（解析自 period_text）',
+  `product_uid` varchar(64) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '商品ID，例如 25-HWLY-00002',
+  `product_sku` varchar(64) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'SKU，例如 E56012002',
+  `platform` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '平台，例如 AMAZON-EU / AMAZON-US / MANO-EU / TEMU / LM / OTTO / DLZ-EU / REAL / castorama / CD',
+  `platform_site` varchar(64) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '站点，例如 AMAZON-BE-FB / MANO-DE-COMMF / TEMU-NF-A',
+  `product_status` varchar(32) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '产品状态：新品/保留品/不保留老品/分销',
+  `category_lv2` varchar(64) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '二级分类，例如 淋浴花洒套装 / 厨房龙头',
+  `category_lv3` varchar(64) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '三级分类，例如 传统恒温淋浴花洒套装',
+  `sales_team` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT '销售组',
+  `sales_manager` varchar(64) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '销售经理（可能带平台后缀，如 陈晓佳AMZ）',
+  `sales_owner` varchar(64) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '销售负责人（可能带平台后缀，如 刘思兰TEMU）',
+  `sales_qty` int NOT NULL DEFAULT '0' COMMENT '销量',
+  `platform_sales_amount` decimal(18,6) NOT NULL DEFAULT '0.000000' COMMENT '平台销售额（平台口径含退款前金额）',
+  `refund_qty` int NOT NULL DEFAULT '0' COMMENT '退款数量',
+  `reship_qty` int NOT NULL DEFAULT '0' COMMENT '重发数量',
+  `refund_amount` decimal(18,6) NOT NULL DEFAULT '0.000000' COMMENT '退款额',
+  `sales_amount` decimal(18,6) NOT NULL DEFAULT '0.000000' COMMENT '销售额（= 平台销售额 - 退款额）',
+  `review_fee` decimal(18,6) NOT NULL DEFAULT '0.000000' COMMENT '测评费',
+  `seckill_fee` decimal(18,6) NOT NULL DEFAULT '0.000000' COMMENT '秒杀费',
+  `ad_fee_amz` decimal(18,6) NOT NULL DEFAULT '0.000000' COMMENT '广告费(AMZ)',
+  `ad_fee_non_amz` decimal(18,6) NOT NULL DEFAULT '0.000000' COMMENT '广告费(非AMZ)',
+  `ad_fee_total` decimal(18,6) NOT NULL DEFAULT '0.000000' COMMENT '广告费合计（= AMZ + 非AMZ）',
+  `platform_fee_amz` decimal(18,6) NOT NULL DEFAULT '0.000000' COMMENT '平台费(AMZ)',
+  `platform_fee_non_amz` decimal(18,6) NOT NULL DEFAULT '0.000000' COMMENT '平台费(非AMZ)',
+  `platform_fee_total` decimal(18,6) NOT NULL DEFAULT '0.000000' COMMENT '平台费合计',
+  `sales_tax_amz` decimal(18,6) NOT NULL DEFAULT '0.000000' COMMENT '销售税(AMZ)',
+  `sales_tax_non_amz` decimal(18,6) NOT NULL DEFAULT '0.000000' COMMENT '销售税(非AMZ)',
+  `sales_tax_total` decimal(18,6) NOT NULL DEFAULT '0.000000' COMMENT '销售税合计',
+  `shipping_fee` decimal(18,6) NOT NULL DEFAULT '0.000000' COMMENT '派送费（尾程派送）',
+  `overseas_warehouse_rent` decimal(18,6) NOT NULL DEFAULT '0.000000' COMMENT '海外仓仓租费',
+  `fba_warehouse_rent` decimal(18,6) NOT NULL DEFAULT '0.000000' COMMENT 'FBA 仓租费',
+  `warehouse_rent_total` decimal(18,6) NOT NULL DEFAULT '0.000000' COMMENT '仓租合计（= 海外仓 + FBA）',
+  `withdrawal_fee` decimal(18,6) NOT NULL DEFAULT '0.000000' COMMENT '提现费',
+  `monthly_rent` decimal(18,6) NOT NULL DEFAULT '0.000000' COMMENT '月租（FBA Monthly Storage 等月度费用）',
+  `compensation_amount` decimal(18,6) NOT NULL DEFAULT '0.000000' COMMENT '赔偿金额（平台/物流赔付）',
+  `other_allocated_fee` decimal(18,6) NOT NULL DEFAULT '0.000000' COMMENT '其他分摊费用',
+  `relisting_qty` int NOT NULL DEFAULT '0' COMMENT '二次上架数量',
+  `relisting_amount` decimal(18,6) NOT NULL DEFAULT '0.000000' COMMENT '二次上架金额',
+  `purchase_cost` decimal(18,6) NOT NULL DEFAULT '0.000000' COMMENT '采购成本',
+  `first_leg_fee` decimal(18,6) NOT NULL DEFAULT '0.000000' COMMENT '头程',
+  `tariff` decimal(18,6) NOT NULL DEFAULT '0.000000' COMMENT '关税',
+  `gross_profit` decimal(18,6) NOT NULL DEFAULT '0.000000' COMMENT '毛利',
+  `gross_margin_rate` decimal(10,6) DEFAULT NULL COMMENT '毛利率（小数形式，0.225 表示 22.5%）',
+  `op_mode` varchar(16) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '运营模式：自运营/代运营',
+  `supplier` varchar(64) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '供应商，例如 启程/海镘/百途鸿',
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '写入时间',
+  `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_period_product_sku_site` (`period_start`,`period_end`,`product_uid`,`product_sku`,`platform_site`),
+  KEY `idx_sales_daily_period` (`period_start`,`period_end`),
+  KEY `idx_sales_daily_sku_period` (`product_sku`,`period_start`),
+  KEY `idx_sales_daily_product` (`product_uid`),
+  KEY `idx_sales_daily_site` (`platform_site`),
+  KEY `idx_sales_daily_platform` (`platform`),
+  KEY `idx_sales_daily_owner` (`sales_owner`),
+  KEY `idx_sales_daily_category` (`category_lv2`,`category_lv3`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='销售日报表';
