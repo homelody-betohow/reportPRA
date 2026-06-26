@@ -1,9 +1,0 @@
-{
-  "host": "172.18.188.18",
-  "port": 3309,
-  "user": "rpa-bth",
-  "password": "rpa123!!",
-  "database": "rpa-report",
-  "charset": "utf8mb4",
-  "comment": "须与 .env 中 MYSQL_* 一致；库名含连字符时 SQL 中需写 `bth-report`"
-}
