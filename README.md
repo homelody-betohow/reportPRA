@@ -40,4 +40,3 @@ rpa-task/
 
 - 表结构 DDL：`docs/database/*.sql`
 - 连接配置：`config/db_config.json`（复制 `db_config.example.json`）
-- Navicat / 局域网连接：[docs/MySQL-连接说明.md](docs/MySQL-连接说明.md)
